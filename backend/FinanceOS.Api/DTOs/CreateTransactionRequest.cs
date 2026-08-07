@@ -13,4 +13,7 @@ public class CreateTransactionRequest
     public string Merchant { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
     public string Currency { get; set; } = "USD";
+    public string AccountName { get; set; } = string.Empty;
+    public string Institution { get; set; } = string.Empty;
+    public string CategoryName { get; set; } = string.Empty;
 }

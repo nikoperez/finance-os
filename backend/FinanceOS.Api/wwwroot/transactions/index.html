@@ -5,28 +5,483 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FinanceOS Transactions</title>
   <style>
-    :root { color-scheme: dark; }
-    body { font-family: Inter, Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #020617, #111827); color: #e2e8f0; }
-    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 48px; }
-    .card { background: rgba(17, 24, 39, 0.95); border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; }
-    a { color: #7dd3fc; }
+    :root {
+      color-scheme: dark;
+      --bg: #020617;
+      --panel: rgba(15, 23, 42, 0.95);
+      --panel-2: rgba(17, 24, 39, 0.95);
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #8b5cf6;
+      --success: #34d399;
+      --danger: #fb7185;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--bg), #111827);
+      min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 28px 20px 48px; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .page-header h1 { margin: 0 0 6px; font-size: 2rem; }
+    .page-header p { margin: 0; color: var(--muted); max-width: 650px; }
+    .back-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 12px 36px rgba(2, 8, 23, 0.25);
+    }
+    .card h2 { margin: 0 0 8px; font-size: 1.1rem; }
+    .card .subtle { color: var(--muted); margin: 0 0 10px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .summary-tile { background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(139, 92, 246, 0.18)); border: 1px solid rgba(125, 211, 252, 0.2); border-radius: 14px; padding: 14px; }
+    .summary-tile .label { color: var(--muted); font-size: 0.9rem; }
+    .summary-tile .value { font-size: 1.25rem; font-weight: 700; margin-top: 4px; }
+    form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-size: 0.95rem; color: var(--muted); }
+    input, select, textarea, button { padding: 10px 12px; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: var(--text); }
+    button { cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: none; font-weight: 700; }
+    button.secondary { background: linear-gradient(135deg, #1d4ed8, #4338ca); }
+    .list { display: grid; gap: 10px; }
+    .item { border: 1px solid #1e293b; border-radius: 14px; padding: 12px; background: linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.95)); }
+    .item-head { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .meta { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; background: rgba(52, 211, 153, 0.15); color: var(--success); border: 1px solid rgba(52, 211, 153, 0.25); }
+    .pill.warn { color: #fbbf24; background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.2); }
+    .pill.danger { color: var(--danger); background: rgba(251, 113, 133, 0.12); border-color: rgba(251, 113, 133, 0.2); }
+    .detail-box { margin-top: 10px; padding: 10px; border-radius: 10px; background: rgba(2, 6, 23, 0.78); border: 1px solid #1e293b; max-height: 160px; overflow: auto; }
+    .detail-box pre { margin: 0; white-space: pre-wrap; word-break: break-word; color: #cbd5e1; font-size: 0.84rem; }
+    .toggle-btn {
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .toggle-btn.danger {
+      color: var(--danger);
+      border-color: rgba(251, 113, 133, 0.24);
+    }
+    .metadata-panel { display: none; margin-top: 10px; }
+    .metadata-panel.open { display: block; }
+    .activity-panel { display: none; }
+    .activity-panel.open { display: block; }
+    :focus-visible { outline: 2px solid rgba(56, 189, 248, 0.68); outline-offset: 2px; }
+    .status-line { margin-top: 12px; color: #93c5fd; min-height: 1.5em; }
+    .empty-state { color: var(--muted); padding: 10px 0; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .subgrid { display: grid; gap: 12px; }
+    a { color: var(--accent); }
+    @media (max-width: 720px) { .container { padding: 20px 14px 36px; } }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Transactions View</h1>
-    <p><a href="/">← Back to dashboard</a></p>
+    <div class="page-header">
+      <div>
+        <h1>Money overview</h1>
+        <p>Manage accounts, add transactions, connect a bank, and inspect synced details without leaving the page.</p>
+      </div>
+      <a class="back-link" href="/">← Back to dashboard</a>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Connect a bank</h2>
+        <p class="subtle">Use Plaid sandbox to link an account and import transactions in one flow.</p>
+        <button id="connectBankBtn" type="button">Create Plaid link token</button>
+        <p id="bankStatus" class="status-line"></p>
+      </div>
+
+      <div class="card">
+        <h2>Bank connections</h2>
+        <p class="subtle">Recent connections and status updates appear here.</p>
+        <div id="connectionsList" class="list">Loading...</div>
+      </div>
+    </div>
+
     <div class="card">
-      <pre id="transactionsOutput">Loading...</pre>
+      <h2>Add an account</h2>
+      <form id="accountForm">
+        <label>Name<input name="accountName" required /></label>
+        <label>Institution<input name="institution" placeholder="Bank name" /></label>
+        <label>Type<select name="accountType"><option value="0">Checking</option><option value="1">Savings</option><option value="2">Credit</option><option value="3">Investment</option><option value="4">Cash</option><option value="5">Other</option></select></label>
+        <label>Balance<input name="balance" type="number" step="0.01" value="0" /></label>
+        <label>Currency<input name="currency" value="USD" /></label>
+        <button type="submit" style="grid-column: 1 / -1;">Save account</button>
+      </form>
+      <p id="accountStatus" class="status-line"></p>
+    </div>
+
+    <div class="card">
+      <h2>Add a transaction</h2>
+      <form id="transactionForm">
+        <label>Account<select id="accountSelect" name="accountSelect"><option value="">Use a new account name</option></select></label>
+        <label>Amount<input name="amount" type="number" step="0.01" required /></label>
+        <label>Type<select name="type"><option value="Expense">Expense</option><option value="Income">Income</option></select></label>
+        <label>Description<input name="description" required /></label>
+        <label>Merchant<input name="merchant" /></label>
+        <label>Account name<input name="accountName" placeholder="Checking" /></label>
+        <label>Institution<input name="institution" placeholder="Bank name" /></label>
+        <label>Category<input name="categoryName" placeholder="Food" /></label>
+        <label>Occurred at<input name="occurredAt" type="datetime-local" /></label>
+        <label style="grid-column: 1 / -1;">Notes<textarea name="notes" rows="3"></textarea></label>
+        <button type="submit" style="grid-column: 1 / -1;">Save transaction</button>
+      </form>
+      <p id="formStatus" class="status-line"></p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Your accounts</h2>
+        <p class="subtle">Balances and institutions are surfaced in a more readable layout.</p>
+        <div id="accountsList" class="list">Loading...</div>
+      </div>
+
+      <div class="card">
+        <h2>Recent transactions</h2>
+        <p class="subtle">Expand any row to inspect the full payload and synced metadata.</p>
+        <div id="transactionsList" class="list">Loading...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Data controls</h2>
+      <p class="subtle">Remove the working data or wipe the whole local database when you want a clean slate.</p>
+      <div class="actions" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <button type="button" class="toggle-btn danger" id="clearDataBtn">Clear all data</button>
+        <button type="button" class="toggle-btn danger" id="resetDbBtn">Reset whole database</button>
+      </div>
+      <p id="dataStatus" class="status-line"></p>
+    </div>
+
+    <div class="card">
+      <h2>Latest activity details</h2>
+      <p class="subtle">Recent bank-sync and form responses are shown here in easy-to-read JSON.</p>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+        <button type="button" class="toggle-btn" id="activityToggleBtn">Show payload</button>
+      </div>
+      <div class="activity-panel" id="activityPanel">
+        <div class="detail-box"><pre id="activityDetails">{}</pre></div>
+      </div>
     </div>
   </div>
+
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <script>
+    const transactionForm = document.getElementById('transactionForm');
+    const accountForm = document.getElementById('accountForm');
+    const connectBankBtn = document.getElementById('connectBankBtn');
+    const formStatus = document.getElementById('formStatus');
+    const accountStatus = document.getElementById('accountStatus');
+    const bankStatus = document.getElementById('bankStatus');
+    const list = document.getElementById('transactionsList');
+    const accountsList = document.getElementById('accountsList');
+    const accountSelect = document.getElementById('accountSelect');
+    const summaryGrid = document.getElementById('summaryGrid');
+    const connectionsList = document.getElementById('connectionsList');
+    const activityDetails = document.getElementById('activityDetails');
+    const clearDataBtn = document.getElementById('clearDataBtn');
+    const resetDbBtn = document.getElementById('resetDbBtn');
+    const dataStatus = document.getElementById('dataStatus');
+    const activityToggleBtn = document.getElementById('activityToggleBtn');
+    const activityPanel = document.getElementById('activityPanel');
+
+    const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+    function formatCurrency(value) {
+      const number = Number(value || 0);
+      return currencyFormatter.format(number);
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function updateActivity(title, payload) {
+      const detail = {
+        timestamp: new Date().toISOString(),
+        title,
+        payload
+      };
+      activityDetails.textContent = JSON.stringify(detail, null, 2);
+    }
+
+    async function loadSummary() {
+      const res = await fetch('/api/finance/summary');
+      const data = await res.json();
+      summaryGrid.innerHTML = [
+        { label: 'Income', value: formatCurrency(data.income) },
+        { label: 'Expenses', value: formatCurrency(data.expenses) },
+        { label: 'Net', value: formatCurrency(data.net) },
+        { label: 'Transactions', value: data.transactionCount ?? 0 },
+        { label: 'Accounts', value: data.accountCount ?? 0 }
+      ].map(item => `<div class="summary-tile"><div class="label">${item.label}</div><div class="value">${item.value}</div></div>`).join('');
+    }
+
+    async function loadConnections() {
+      const res = await fetch('/api/finance/connections');
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        connectionsList.innerHTML = '<div class="empty-state">No bank connections yet. Connect one to start importing transactions.</div>';
+        return;
+      }
+
+      connectionsList.innerHTML = data.slice(0, 4).map(connection => {
+        const statusClass = connection.status === 'Connected' ? 'pill' : 'pill warn';
+        return `<div class="item"><div class="item-head"><strong>${escapeHtml(connection.institutionName || 'Connected bank')}</strong><span class="${statusClass}">${escapeHtml(connection.status || 'Unknown')}</span></div><div class="meta">Provider: ${escapeHtml(connection.provider || 'Plaid')} • Updated: ${formatDate(connection.updatedAt || connection.createdAt)}</div></div>`;
+      }).join('');
+    }
+
+    async function loadAccounts() {
+      const res = await fetch('/api/finance/accounts');
+      const data = await res.json();
+      accountSelect.innerHTML = '<option value="">Use a new account name</option>' + data.map(item => `<option value="${item.id}">${escapeHtml(item.name)} • ${escapeHtml(item.institution || 'No institution')}</option>`).join('');
+
+      if (!Array.isArray(data) || data.length === 0) {
+        accountsList.innerHTML = '<div class="empty-state">No accounts yet. Create one above.</div>';
+        return;
+      }
+
+      accountsList.innerHTML = data.map(item => `
+        <div class="item">
+          <div class="item-head">
+            <strong>${escapeHtml(item.name)}</strong>
+            <span class="pill">${formatCurrency(item.balance)}</span>
+          </div>
+          <div class="meta">Institution: ${escapeHtml(item.institution || '—')} • Type: ${escapeHtml(item.type ?? 'Unknown')} • Currency: ${escapeHtml(item.currency || 'USD')}</div>
+        </div>
+      `).join('');
+    }
+
     async function loadTransactions() {
       const res = await fetch('/api/finance/transactions');
       const data = await res.json();
-      document.getElementById('transactionsOutput').textContent = JSON.stringify(data, null, 2);
+      if (!Array.isArray(data) || data.length === 0) {
+        list.innerHTML = '<div class="empty-state">No transactions yet. Add your first one above.</div>';
+        return;
+      }
+
+      list.innerHTML = data.slice(0, 8).map(item => {
+        const amountClass = item.type === 0 ? 'pill' : 'pill danger';
+        const typeLabel = item.type === 0 ? 'Income' : 'Expense';
+        return `
+          <div class="item">
+            <div class="item-head">
+              <strong>${escapeHtml(item.description || 'Untitled transaction')}</strong>
+              <span class="${amountClass}">${typeLabel} • ${formatCurrency(item.amount)}</span>
+            </div>
+            <div class="meta">${escapeHtml(item.merchant || 'No merchant')} • ${formatDate(item.occurredAt)} • Source: ${escapeHtml(item.source || 'Manual')}</div>
+            <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+              <button type="button" class="toggle-btn" onclick="toggleMetadata(this)">Show metadata</button>
+            </div>
+            <div class="metadata-panel">
+              <div class="detail-box"><pre>${escapeHtml(JSON.stringify(item, null, 2))}</pre></div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
+
+    function toggleMetadata(button) {
+      const panel = button.parentElement.nextElementSibling;
+      const open = panel.classList.toggle('open');
+      button.textContent = open ? 'Hide metadata' : 'Show metadata';
+    }
+
+    function toggleActivityPanel() {
+      const open = activityPanel.classList.toggle('open');
+      activityToggleBtn.textContent = open ? 'Hide payload' : 'Show payload';
+    }
+
+    async function resetData(kind) {
+      const message = kind === 'database'
+        ? 'This will delete the entire local database and recreate an empty schema. Continue?'
+        : 'This will remove all transactions, accounts, connections, and related data. Continue?';
+
+      if (!window.confirm(message)) {
+        return;
+      }
+
+      dataStatus.textContent = kind === 'database' ? 'Resetting database...' : 'Clearing data...';
+      const res = await fetch(`/api/finance/${kind === 'database' ? 'database' : 'data'}`, { method: 'DELETE' });
+      const payload = await res.json().catch(() => ({}));
+      updateActivity(kind === 'database' ? 'Database reset' : 'Data clear', payload);
+
+      if (res.ok) {
+        dataStatus.textContent = payload.message || 'Done.';
+        await loadSummary();
+        await loadConnections();
+        await loadAccounts();
+        await loadTransactions();
+      } else {
+        dataStatus.textContent = payload.error || 'Operation failed.';
+      }
+    }
+
+    connectBankBtn.addEventListener('click', async () => {
+      bankStatus.textContent = 'Creating a Plaid Link token...';
+      const res = await fetch('/api/finance/connections/link-token', { method: 'POST' });
+      const data = await res.json();
+
+      updateActivity('Link token response', data);
+
+      if (!res.ok || !data.linkToken) {
+        bankStatus.textContent = data.note || 'Unable to create a Plaid Link token.';
+        return;
+      }
+
+      const handler = window.Plaid.create({
+        token: data.linkToken,
+        onSuccess: async (publicToken, metadata) => {
+          bankStatus.textContent = 'Exchanging Plaid public token...';
+          const exchangeRes = await fetch('/api/finance/connections/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ publicToken, institutionName: metadata?.institution?.name || 'Connected Bank' })
+          });
+
+          const exchangeData = await exchangeRes.json();
+          updateActivity('Exchange response', exchangeData);
+
+          if (exchangeData.ok) {
+            bankStatus.textContent = 'Bank connection established. Syncing transactions...';
+            const syncRes = await fetch(`/api/finance/connections/${exchangeData.connection.id}/sync`, { method: 'POST' });
+            const syncData = await syncRes.json();
+            updateActivity('Sync response', syncData);
+            bankStatus.textContent = syncData.importedCount > 0
+              ? `Connected and synced ${syncData.importedCount} transaction(s).`
+              : 'Connected, but no new transactions were imported.';
+            await loadTransactions();
+            await loadAccounts();
+            await loadConnections();
+            await loadSummary();
+          } else {
+            bankStatus.textContent = 'Bank connection failed.';
+          }
+        },
+        onExit: (err, metadata) => {
+          if (err) {
+            bankStatus.textContent = 'Plaid Link was closed with an error.';
+          } else if (metadata?.status === 'requires_code') {
+            bankStatus.textContent = 'Additional verification is required.';
+          }
+        },
+        onEvent: (eventName, metadata) => {
+          if (eventName === 'HANDOFF') {
+            bankStatus.textContent = 'Plaid Link is handing off to the institution.';
+          }
+        }
+      });
+
+      handler.open();
+    });
+
+    accountForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(accountForm);
+      const payload = {
+        name: formData.get('accountName') || 'Checking',
+        institution: formData.get('institution') || '',
+        type: Number(formData.get('accountType')),
+        balance: Number(formData.get('balance')) || 0,
+        currency: formData.get('currency') || 'USD',
+        isActive: true
+      };
+
+      accountStatus.textContent = 'Saving account...';
+      const res = await fetch('/api/finance/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const saved = await res.text();
+      updateActivity('Account save response', saved);
+
+      if (res.ok) {
+        accountStatus.textContent = 'Account saved.';
+        accountForm.reset();
+        await loadAccounts();
+        await loadSummary();
+      } else {
+        accountStatus.textContent = `Save failed: ${saved}`;
+      }
+    });
+
+    transactionForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(transactionForm);
+      const payload = {
+        amount: Number(formData.get('amount')),
+        type: formData.get('type') === 'Income' ? 0 : 1,
+        description: formData.get('description') || 'Untitled',
+        merchant: formData.get('merchant') || '',
+        notes: formData.get('notes') || '',
+        accountName: formData.get('accountName') || '',
+        institution: formData.get('institution') || '',
+        categoryName: formData.get('categoryName') || '',
+        occurredAt: formData.get('occurredAt') ? new Date(formData.get('occurredAt')).toISOString() : new Date().toISOString(),
+        currency: 'USD'
+      };
+
+      if (accountSelect.value) {
+        payload.accountId = accountSelect.value;
+      }
+
+      formStatus.textContent = 'Saving...';
+      const res = await fetch('/api/finance/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const saved = await res.text();
+      updateActivity('Transaction save response', saved);
+
+      if (res.ok) {
+        formStatus.textContent = 'Transaction saved.';
+        transactionForm.reset();
+        await loadTransactions();
+        await loadAccounts();
+        await loadSummary();
+      } else {
+        formStatus.textContent = `Save failed: ${saved}`;
+      }
+    });
+
+    clearDataBtn.addEventListener('click', () => resetData('data'));
+    resetDbBtn.addEventListener('click', () => resetData('database'));
+    activityToggleBtn.addEventListener('click', toggleActivityPanel);
+
+    loadSummary();
+    loadConnections();
+    loadAccounts();
     loadTransactions();
   </script>
 </body>

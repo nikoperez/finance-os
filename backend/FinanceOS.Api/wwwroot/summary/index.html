@@ -5,28 +5,108 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FinanceOS Summary</title>
   <style>
-    :root { color-scheme: dark; }
-    body { font-family: Inter, Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #020617, #111827); color: #e2e8f0; }
-    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 48px; }
-    .card { background: rgba(17, 24, 39, 0.95); border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; }
-    a { color: #7dd3fc; }
+    :root {
+      color-scheme: dark;
+      --bg: #020617;
+      --panel: rgba(15, 23, 42, 0.95);
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #8b5cf6;
+      --success: #34d399;
+      --danger: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; background: linear-gradient(135deg, var(--bg), #111827); color: var(--text); min-height: 100vh; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px 48px; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .page-header h1 { margin: 0 0 6px; font-size: 2rem; }
+    .page-header p { margin: 0; color: var(--muted); max-width: 680px; }
+    .back-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 12px 36px rgba(2, 8, 23, 0.25); }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .summary-tile { border: 1px solid rgba(125, 211, 252, 0.2); border-radius: 14px; padding: 14px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(139, 92, 246, 0.16)); }
+    .summary-tile .label { color: var(--muted); font-size: 0.9rem; }
+    .summary-tile .value { font-size: 1.25rem; font-weight: 700; margin-top: 4px; }
+    .pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
+    .pill.good { color: var(--success); background: rgba(52, 211, 153, 0.15); border: 1px solid rgba(52, 211, 153, 0.25); }
+    .pill.warn { color: #fbbf24; background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.25); }
+    .pill.bad { color: var(--danger); background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251, 113, 133, 0.25); }
+    .detail-box { padding: 12px; border-radius: 12px; background: rgba(2, 6, 23, 0.8); border: 1px solid #1e293b; max-height: 240px; overflow: auto; }
+    .detail-box pre { margin: 0; white-space: pre-wrap; word-break: break-word; color: #cbd5e1; font-size: 0.84rem; overflow-x: auto; }
+    .toggle-btn {
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .payload-panel { display: none; margin-top: 10px; }
+    .payload-panel.open { display: block; }
+    a { color: var(--accent); }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Summary View</h1>
-    <p><a href="/">← Back to dashboard</a></p>
+    <div class="page-header">
+      <div>
+        <h1>Summary view</h1>
+        <p>See your key finances at a glance with clearer totals, balances, and a more readable snapshot of the backend response.</p>
+      </div>
+      <a class="back-link" href="/">← Back to dashboard</a>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
     <div class="card">
-      <pre id="summaryOutput">Loading...</pre>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h2 style="margin:0;">Live data snapshot</h2>
+        <button type="button" class="toggle-btn" id="payloadToggleBtn">Show payload</button>
+      </div>
+      <div class="payload-panel" id="payloadPanel">
+        <div class="detail-box"><pre id="summaryOutput">Loading...</pre></div>
+      </div>
     </div>
   </div>
+
   <script>
+    const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    const payloadToggleBtn = document.getElementById('payloadToggleBtn');
+    const payloadPanel = document.getElementById('payloadPanel');
+
+    function formatCurrency(value) {
+      return currencyFormatter.format(Number(value || 0));
+    }
+
+    function togglePayload() {
+      const open = payloadPanel.classList.toggle('open');
+      payloadToggleBtn.textContent = open ? 'Hide payload' : 'Show payload';
+    }
+
     async function loadSummary() {
       const res = await fetch('/api/finance/summary');
       const data = await res.json();
+      const net = Number(data.net || 0);
+      const statusClass = net >= 0 ? 'pill good' : 'pill bad';
+      const statusText = net >= 0 ? 'Positive cash flow' : 'Spending exceeds income';
+
+      document.getElementById('summaryGrid').innerHTML = [
+        { label: 'Income', value: formatCurrency(data.income) },
+        { label: 'Expenses', value: formatCurrency(data.expenses) },
+        { label: 'Net', value: formatCurrency(data.net) },
+        { label: 'Transactions', value: data.transactionCount ?? 0 },
+        { label: 'Accounts', value: data.accountCount ?? 0 },
+        { label: 'Status', value: `<span class="${statusClass}">${statusText}</span>` }
+      ].map(item => `<div class="summary-tile"><div class="label">${item.label}</div><div class="value">${item.value}</div></div>`).join('');
+
       document.getElementById('summaryOutput').textContent = JSON.stringify(data, null, 2);
     }
+
+    payloadToggleBtn.addEventListener('click', togglePayload);
     loadSummary();
   </script>
 </body>

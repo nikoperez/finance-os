@@ -15,4 +15,5 @@ public class FinanceDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<BankConnection> BankConnections => Set<BankConnection>();
 }

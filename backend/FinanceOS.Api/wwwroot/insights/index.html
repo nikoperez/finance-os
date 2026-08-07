@@ -5,28 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FinanceOS Insights</title>
   <style>
-    :root { color-scheme: dark; }
-    body { font-family: Inter, Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #020617, #111827); color: #e2e8f0; }
-    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 48px; }
-    .card { background: rgba(17, 24, 39, 0.95); border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; }
-    a { color: #7dd3fc; }
+    :root {
+      color-scheme: dark;
+      --bg: #020617;
+      --panel: rgba(15, 23, 42, 0.95);
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #8b5cf6;
+      --success: #34d399;
+      --danger: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, Arial, sans-serif; background: linear-gradient(135deg, var(--bg), #111827); color: var(--text); min-height: 100vh; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px 48px; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .page-header h1 { margin: 0 0 6px; font-size: 2rem; }
+    .page-header p { margin: 0; color: var(--muted); max-width: 700px; }
+    .back-link { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 12px 36px rgba(2, 8, 23, 0.25); }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .summary-tile { border: 1px solid rgba(125, 211, 252, 0.2); border-radius: 14px; padding: 14px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.16), rgba(139, 92, 246, 0.16)); }
+    .summary-tile .label { color: var(--muted); font-size: 0.9rem; }
+    .summary-tile .value { font-size: 1.24rem; font-weight: 700; margin-top: 4px; }
+    .list { display: grid; gap: 10px; }
+    .item { border: 1px solid #1e293b; border-radius: 14px; padding: 12px; background: rgba(2, 6, 23, 0.8); }
+    .item-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .meta { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+    .detail-box { padding: 12px; border-radius: 12px; background: rgba(2, 6, 23, 0.8); border: 1px solid #1e293b; max-height: 240px; overflow: auto; }
+    .detail-box pre { margin: 0; white-space: pre-wrap; word-break: break-word; color: #cbd5e1; font-size: 0.84rem; overflow-x: auto; }
+    .toggle-btn {
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      background: rgba(2, 6, 23, 0.8);
+      color: var(--accent);
+      padding: 6px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .payload-panel { display: none; margin-top: 10px; }
+    .payload-panel.open { display: block; }
+    a { color: var(--accent); }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Insights View</h1>
-    <p><a href="/">← Back to dashboard</a></p>
+    <div class="page-header">
+      <div>
+        <h1>Insights view</h1>
+        <p>Review trends and top categories in a clearer layout so the numbers are easier to interpret.</p>
+      </div>
+      <a class="back-link" href="/">← Back to dashboard</a>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
     <div class="card">
-      <pre id="insightsOutput">Loading...</pre>
+      <h2>Top spending categories</h2>
+      <div id="categoriesList" class="list">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h2>Monthly trend</h2>
+      <div id="monthlyList" class="list">Loading...</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h2 style="margin:0;">Raw insight payload</h2>
+        <button type="button" class="toggle-btn" id="payloadToggleBtn">Show payload</button>
+      </div>
+      <div class="payload-panel" id="payloadPanel">
+        <div class="detail-box"><pre id="insightsOutput">Loading...</pre></div>
+      </div>
     </div>
   </div>
+
   <script>
+    const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    const payloadToggleBtn = document.getElementById('payloadToggleBtn');
+    const payloadPanel = document.getElementById('payloadPanel');
+
+    function formatCurrency(value) {
+      return currencyFormatter.format(Number(value || 0));
+    }
+
+    function togglePayload() {
+      const open = payloadPanel.classList.toggle('open');
+      payloadToggleBtn.textContent = open ? 'Hide payload' : 'Show payload';
+    }
+
     async function loadInsights() {
       const res = await fetch('/api/finance/insights');
       const data = await res.json();
+
+      document.getElementById('summaryGrid').innerHTML = [
+        { label: 'Income', value: formatCurrency(data.income) },
+        { label: 'Expenses', value: formatCurrency(data.expenses) },
+        { label: 'Net', value: formatCurrency(data.net) },
+        { label: 'Categories', value: data.byCategory?.length ?? 0 }
+      ].map(item => `<div class="summary-tile"><div class="label">${item.label}</div><div class="value">${item.value}</div></div>`).join('');
+
+      const categoriesList = document.getElementById('categoriesList');
+      const monthlyList = document.getElementById('monthlyList');
+
+      if (Array.isArray(data.byCategory) && data.byCategory.length > 0) {
+        categoriesList.innerHTML = data.byCategory.slice(0, 8).map(item => `
+          <div class="item">
+            <div class="item-head">
+              <strong>${item.category}</strong>
+              <span>${formatCurrency(item.amount)}</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        categoriesList.innerHTML = '<div class="item">No expense categories yet.</div>';
+      }
+
+      if (Array.isArray(data.monthlyTrend) && data.monthlyTrend.length > 0) {
+        monthlyList.innerHTML = data.monthlyTrend.map(item => `
+          <div class="item">
+            <div class="item-head">
+              <strong>${item.month}</strong>
+              <span>${formatCurrency(item.net)}</span>
+            </div>
+            <div class="meta">Income: ${formatCurrency(item.income)} • Expenses: ${formatCurrency(item.expenses)}</div>
+          </div>
+        `).join('');
+      } else {
+        monthlyList.innerHTML = '<div class="item">No monthly trend data available yet.</div>';
+      }
+
       document.getElementById('insightsOutput').textContent = JSON.stringify(data, null, 2);
     }
+
+    payloadToggleBtn.addEventListener('click', togglePayload);
     loadInsights();
   </script>
 </body>
