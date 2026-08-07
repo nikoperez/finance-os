@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceOS Dashboard</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: Inter, Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #020617, #111827); color: #e2e8f0; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px 48px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.9); padding: 16px 20px; border-radius: 16px; border: 1px solid #334155; margin-bottom: 20px; }
+    .nav a { color: #7dd3fc; margin-left: 12px; text-decoration: none; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .card { background: rgba(17, 24, 39, 0.95); border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.15); }
+    .metric { background: #1f2937; padding: 16px; border-radius: 12px; }
+    button { background: #38bdf8; color: #082f49; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; }
+    a { color: #7dd3fc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1 style="margin:0;">FinanceOS Dashboard</h1>
+        <p style="margin:4px 0 0;">A personal finance workspace you can view in the browser.</p>
+      </div>
+      <div class="nav">
+        <a href="/summary/">Summary</a>
+        <a href="/transactions/">Transactions</a>
+        <a href="/insights/">Insights</a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="metric"><strong>Income</strong><br /><span id="income">--</span></div>
+      <div class="metric"><strong>Expenses</strong><br /><span id="expenses">--</span></div>
+      <div class="metric"><strong>Net</strong><br /><span id="net">--</span></div>
+      <div class="metric"><strong>Transactions</strong><br /><span id="transactionCount">--</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Quick actions</h2>
+      <button onclick="loadAll()">Refresh data</button>
+    </div>
+
+    <div class="card">
+      <h2>Summary view</h2>
+      <pre id="summaryOutput">Loading...</pre>
+    </div>
+
+    <div class="card">
+      <h2>Transactions view</h2>
+      <pre id="transactionsOutput">Loading...</pre>
+    </div>
+
+    <div class="card">
+      <h2>Insights view</h2>
+      <pre id="insightsOutput">Loading...</pre>
+    </div>
+  </div>
+
+  <script>
+    async function loadAll() {
+      const summaryRes = await fetch('/api/finance/summary');
+      const summaryData = await summaryRes.json();
+      document.getElementById('summaryOutput').textContent = JSON.stringify(summaryData, null, 2);
+
+      const transactionsRes = await fetch('/api/finance/transactions');
+      const transactionsData = await transactionsRes.json();
+      document.getElementById('transactionsOutput').textContent = JSON.stringify(transactionsData, null, 2);
+
+      const insightsRes = await fetch('/api/finance/insights');
+      const insightsData = await insightsRes.json();
+      document.getElementById('insightsOutput').textContent = JSON.stringify(insightsData, null, 2);
+
+      document.getElementById('income').textContent = summaryData.income;
+      document.getElementById('expenses').textContent = summaryData.expenses;
+      document.getElementById('net').textContent = summaryData.net;
+      document.getElementById('transactionCount').textContent = summaryData.transactionCount;
+    }
+    loadAll();
+  </script>
+</body>
+</html>

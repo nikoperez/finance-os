@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinanceOS Summary</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: Inter, Arial, sans-serif; margin: 0; background: linear-gradient(135deg, #020617, #111827); color: #e2e8f0; }
+    .container { max-width: 900px; margin: 0 auto; padding: 32px 20px 48px; }
+    .card { background: rgba(17, 24, 39, 0.95); border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; }
+    a { color: #7dd3fc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Summary View</h1>
+    <p><a href="/">← Back to dashboard</a></p>
+    <div class="card">
+      <pre id="summaryOutput">Loading...</pre>
+    </div>
+  </div>
+  <script>
+    async function loadSummary() {
+      const res = await fetch('/api/finance/summary');
+      const data = await res.json();
+      document.getElementById('summaryOutput').textContent = JSON.stringify(data, null, 2);
+    }
+    loadSummary();
+  </script>
+</body>
+</html>
